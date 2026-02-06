@@ -23,13 +23,15 @@ def ids_to_text(ids):
 
 # ============ MODEL DEFINITION ============
 class SimpleGPTPredictor(nn.Module):
-    def __init__(self, vocab_size, embed_size, num_heads):
+    def __init__(self, vocab_size, embed_size, num_heads, max_len):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
+        # token数の上限
+        self.max_len = max_len
+        # このへんでpos encoding
+        self.pe = self.positional_encoding(max_len, embed_size) # (max_legnth, embed_size)
 
-        # K, V, Qとかの計算->残渣結合->正規化->FFN (Feed Forward Network)とかをやってるぽい
-        # Attention計算では、QとKの（各トークンのKにたいする）内積を計算して、それをベクトルとしてもつ。そのベクトルをSoftmaxで重みにする。
-        # 各トークンのVと重みつき平均を取る。
+
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(embed_size, num_heads, batch_first=True),
             num_layers=2
@@ -40,15 +42,30 @@ class SimpleGPTPredictor(nn.Module):
             num_layers=2
         )
         
-        # Linearは、行列積 shapeは？
-        # 
         self.lm_head = nn.Linear(embed_size, vocab_size)
 
-    def forward(self, src, tgt):
+
+    def forward(self, src, tgt): # (b, seq_length)
+        """
+        pe = 
+        [
+            [12, 123, 1, 4, 5 ,1 ,4],
+            [12, 123, 1, 4, 5 ,1 ,4]
+        ]
+        [
+            [13434, 2343,  3234,...],
+            [32432, 343324, 4343,...],
+            [],
+        ]
+        """
+        # scr（peは↑のような固定値の配列なので、入力エンべディングのサイズに合わせて切り取る）
+        src_p = self.pe[:src.size(1), :].to(src.device) # (seq, embed_dim)
+        target_p = self.pe[:src.size(1), :].to(tgt.device)
+
         # ソースをエンコード
         # batch_first=True なので (batch, seq, embed) のまま
-        src_embedded = self.embedding(src)
-        encoded = self.encoder(src_embedded)
+        src_embedded = self.embedding(src) + src_p
+        encoded = self.encoder(src_embedded) + target_p
         
         # ターゲットをデコード
         tgt_embedded = self.embedding(tgt)
@@ -67,6 +84,15 @@ class SimpleGPTPredictor(nn.Module):
         mask = mask.transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
+
+
+    def positional_encoding(max_len, embed_size):
+        pe = torch.zeros(max_len, embed_size) # [max_length, embedd_size]
+        for pos in range(max_len):
+            for i in range(0, embed_size, 2):
+                pe[pos, i]     = math.sin(pos / (10000 ** (i / embed_size)))
+                pe[pos, i + 1] = math.cos(pos / (10000 ** (i / embed_size)))
+        return pe
 
 # ============ DATA PREPARATION ============
 def create_training_data(text, seq_len=10):
