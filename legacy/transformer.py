@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import math
+import os
 
 device = "cuda:0"
 
@@ -86,7 +88,7 @@ class SimpleGPTPredictor(nn.Module):
         return mask
 
 
-    def positional_encoding(max_len, embed_size):
+    def positional_encoding(self, max_len, embed_size):
         pe = torch.zeros(max_len, embed_size) # [max_length, embedd_size]
         for pos in range(max_len):
             for i in range(0, embed_size, 2):
@@ -112,7 +114,7 @@ print(f"例 - 入力: '{ids_to_text(train_src[20].tolist())}'")
 print(f"例 - 正解: '{ids_to_text(train_tgt[20].tolist())}'")
 
 # ============ MODEL INITIALIZATION ============
-model = SimpleGPTPredictor(vocab_size=len(chars), embed_size=32, num_heads=4)
+model = SimpleGPTPredictor(vocab_size=len(chars), embed_size=32, num_heads=4, max_len=100)
 model.to(device)
 
 # 学習設定
@@ -175,7 +177,10 @@ for epoch in range(1000):
     
     print(f"Epoch {epoch}, Loss: {total_loss/len(train_src):.4f}")
     
-    torch.save(model.state_dict(), f"model_{epoch}.pth")
+    save_dir = "model"
+    
+    os.makedirs(save_dir, exist_ok=True)
+    torch.save(model.state_dict(), f"{save_dir}/model_{epoch}.pth")
 
 # ============ INFERENCE FUNCTIONS ============
 def test_prediction(model: SimpleGPTPredictor, input_text):
