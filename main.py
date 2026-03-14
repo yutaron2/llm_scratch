@@ -1,5 +1,6 @@
 import math
 import os
+import sched
 
 import torch
 import torch.nn as nn
@@ -70,15 +71,16 @@ model = SimpleGPTPredictor(
 )
 model.to(device)
 
-optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.01)
-scheduler = StepLR(optimizer, step_size=100, gamma=0.5)
+optimizer = optim.AdamW(model.parameters(), lr=0.1, weight_decay=0.0)
+# scheduler = StepLR(optimizer, step_size=100, gamma=0.5)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.0)
 criterion = nn.CrossEntropyLoss()
 
 print("\n学習開始...")
 
 for epoch in range(1000):
     total_loss = 0
-    batch_size = 32
+    batch_size = 128
     num_batches = math.ceil(len(train_inputs) / batch_size)
 
     for i in tqdm(range(0, len(train_inputs), batch_size)):
@@ -87,7 +89,7 @@ for epoch in range(1000):
         input_batch = train_inputs[i:i + batch_size]
         target_batch = train_targets[i:i + batch_size]
 
-        output = model(input_batch, input_batch)
+        output = model(input_batch)
         loss = criterion(output.reshape(-1, tokenizer.vocab_size), target_batch.reshape(-1))
         loss.backward()
 
@@ -116,7 +118,7 @@ def test_prediction(model: SimpleGPTPredictor, input_text, temperature=0.0):
     input_tensor = torch.tensor([input_ids], device=device)
 
     with torch.no_grad():
-        output = model(input_tensor, input_tensor)
+        output = model(input_tensor)
         last_token_probs = output[0, -1, :]
 
         if temperature <= 0:
