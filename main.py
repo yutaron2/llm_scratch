@@ -38,32 +38,33 @@ def ids_to_text(ids):
 
 def create_training_data(text, seq_len=SEQ_LEN):
     ids = text_to_ids(text)
-    src_data, tgt_data = [], []
+    input_data, target_data = [], []
 
     for i in range(len(ids) - seq_len):
-        src_data.append(ids[i:i + seq_len])
-        tgt_data.append(ids[i + 1:i + seq_len + 1])
+        window = ids[i:i + seq_len + 1]
+        input_data.append(window[:-1])
+        target_data.append(window[1:])
 
-    if not src_data:
+    if not input_data:
         raise ValueError(
             f"Not enough tokenized data for seq_len={seq_len}. "
             f"Corpus produced only {len(ids)} tokens."
         )
 
-    return torch.tensor(src_data, device=device), torch.tensor(tgt_data, device=device)
+    return torch.tensor(input_data, device=device), torch.tensor(target_data, device=device)
 
 
-train_src, train_tgt = create_training_data(text)
-sample_index = min(20, len(train_src) - 1)
+train_inputs, train_targets = create_training_data(text)
+sample_index = min(20, len(train_inputs) - 1)
 
-print(f"学習データ数: {len(train_src)}")
-print(f"例 - 入力: '{ids_to_text(train_src[sample_index].tolist())}'")
-print(f"例 - 正解: '{ids_to_text(train_tgt[sample_index].tolist())}'")
+print(f"学習データ数: {len(train_inputs)}")
+print(f"例 - 入力: '{ids_to_text(train_inputs[sample_index].tolist())}'")
+print(f"例 - 正解: '{ids_to_text(train_targets[sample_index].tolist())}'")
 
 
 model = SimpleGPTPredictor(
     vocab_size=tokenizer.vocab_size,
-    embed_size=32,
+    embed_size=512,
     num_heads=4,
     max_len=SEQ_LEN,
 )
@@ -78,18 +79,16 @@ print("\n学習開始...")
 for epoch in range(1000):
     total_loss = 0
     batch_size = 32
-    num_batches = math.ceil(len(train_src) / batch_size)
+    num_batches = math.ceil(len(train_inputs) / batch_size)
 
-    for i in tqdm(range(0, len(train_src), batch_size)):
+    for i in tqdm(range(0, len(train_inputs), batch_size)):
         optimizer.zero_grad()
 
-        src_batch = train_src[i:i + batch_size]
-        tgt_batch = train_tgt[i:i + batch_size]
-        tgt_in = tgt_batch[:, :-1]
-        tgt_out = tgt_batch[:, 1:]
+        input_batch = train_inputs[i:i + batch_size]
+        target_batch = train_targets[i:i + batch_size]
 
-        output = model(src_batch, tgt_in)
-        loss = criterion(output.reshape(-1, tokenizer.vocab_size), tgt_out.reshape(-1))
+        output = model(input_batch, input_batch)
+        loss = criterion(output.reshape(-1, tokenizer.vocab_size), target_batch.reshape(-1))
         loss.backward()
 
         optimizer.step()
@@ -106,26 +105,35 @@ for epoch in range(1000):
     tokenizer.save(os.path.join(version_dir, "tokenizer.json"))
 
 
-def test_prediction(model: SimpleGPTPredictor, input_text):
+def test_prediction(model: SimpleGPTPredictor, input_text, temperature=0.0):
     input_ids = text_to_ids(input_text)
+    if len(input_ids) < 1:
+        raise ValueError("At least 1 token is required for inference with the current model.")
+
+    if len(input_ids) > SEQ_LEN:
+        input_ids = input_ids[-SEQ_LEN:]
+
     input_tensor = torch.tensor([input_ids], device=device)
 
     with torch.no_grad():
         output = model(input_tensor, input_tensor)
         last_token_probs = output[0, -1, :]
-        probs = torch.softmax(last_token_probs, dim=-1)
 
-        _, top_index = torch.topk(probs, 1)
-        predicted_token_id = top_index.item()
+        if temperature <= 0:
+            predicted_token_id = int(torch.argmax(last_token_probs).item())
+        else:
+            probs = torch.softmax(last_token_probs / temperature, dim=-1)
+            predicted_token_id = int(torch.multinomial(probs, num_samples=1).item())
+
         predicted_piece = ids_to_text([predicted_token_id])
 
         return predicted_piece
 
 
-def generateSeq(model, text, count=0):
-    next_token = test_prediction(model, text)
+def generateSeq(model, text, count=0, temperature=0.0):
+    next_token = test_prediction(model, text, temperature=temperature)
     if count < 20:
-        return generateSeq(model, text + next_token, count + 1)
+        return generateSeq(model, text + next_token, count + 1, temperature=temperature)
     return text + next_token
 
 
