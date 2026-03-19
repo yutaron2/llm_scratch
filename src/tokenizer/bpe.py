@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import json
 import os
 from collections import Counter
@@ -128,11 +127,7 @@ class BPETokenizer:
 
             merged_token_id = self.merge_token_ids[best_pair]
             merged_token = self.id_to_token[merged_token_id]
-            sequence = (
-                sequence[:best_index]
-                + [merged_token]
-                + sequence[best_index + 2 :]
-            )
+            sequence = sequence[:best_index] + [merged_token] + sequence[best_index + 2 :]
 
         token_ids = [self.token_to_id[token] for token in sequence]
         if add_bos:
@@ -351,45 +346,3 @@ class BPETokenizer:
 
         left, right = self.merges[index]
         return f"{left!r} + {right!r} -> {(left + right)!r}"
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Train a pure-Python character-level BPE tokenizer."
-    )
-    parser.add_argument(
-        "--input",
-        default="inputLearnText.txt",
-        help="Path to the UTF-8 training text file.",
-    )
-    parser.add_argument(
-        "--output",
-        default="tokenizer.json",
-        help="Path to save the trained tokenizer JSON.",
-    )
-    parser.add_argument(
-        "--vocab-size",
-        type=int,
-        default=512,
-        help="Target vocabulary size including base characters, special tokens, and merges.",
-    )
-    args = parser.parse_args()
-
-    with open(args.input, "r", encoding="utf-8") as file:
-        text = file.read()
-
-    tokenizer = BPETokenizer()
-    tokenizer.train(text, vocab_size=args.vocab_size)
-    tokenizer.save(args.output)
-
-    print(f"Tokenizer trained from: {args.input}")
-    print(f"Saved tokenizer to: {args.output}")
-    print(f"Base vocabulary size: {len(tokenizer.base_vocab)}")
-    print(f"Final vocab size: {tokenizer.vocab_size}")
-    print(f"Merge count: {len(tokenizer.merges)}")
-    if tokenizer.merges:
-        print(f"First merge: {tokenizer.describe_merge(0)}")
-
-
-if __name__ == "__main__":
-    main()

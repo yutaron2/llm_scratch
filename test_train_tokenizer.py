@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from train_tokenizer import BPETokenizer
+from src.tokenizer.bpe import BPETokenizer
 
 
 class BPETokenizerTests(unittest.TestCase):

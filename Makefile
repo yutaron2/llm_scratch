@@ -6,7 +6,7 @@ help:
 		'  make sync      - Create/update the local uv environment with dev dependencies' \
 		'  make activate  - Print the command to activate the local virtual environment' \
 		'  make test      - Run the tokenizer unit tests inside uv' \
-		'  make run       - Run the training script inside uv'
+		'  make run       - Run the Hydra training entrypoint inside uv'
 
 sync:
 	uv sync --dev
@@ -19,4 +19,4 @@ test:
 	uv run python -m unittest test_train_tokenizer.py
 
 run:
-	uv run python main.py
+	uv run python src/train.py

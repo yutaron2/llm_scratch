@@ -40,10 +40,25 @@ make test
 make run
 ```
 
+This launches the Hydra-based training entrypoint:
+
+```bash
+uv run python src/train.py
+```
+
+You can override runtime values with Hydra arguments, for example:
+
+```bash
+uv run python src/train.py training.epochs=10 training.batch_size=64
+```
+
 ## Project files
-- `main.py`: training script for the GPT-style model
-- `model.py`: transformer model definition
-- `train_tokenizer.py`: character-level BPE tokenizer implementation
+- `src/train.py`: Hydra-based training script
+- `src/models/simple_transformer.py`: transformer model definition
+- `src/tokenizer/bpe.py`: character-level BPE tokenizer implementation
+- `src/datasets/text_dataset.py`: next-token training sample creation
+- `config/train.yaml`: runtime and training configuration
+- `data/inputLearnText.txt`: training corpus
 - `test_train_tokenizer.py`: tokenizer unit tests
 
 ## References

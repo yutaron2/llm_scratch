@@ -1,0 +1,28 @@
+data:
+  input_path: data/inputLearnText.txt
+
+tokenizer:
+  vocab_size: 512
+
+training:
+  sequence_length: 100
+  epochs: 1000
+  batch_size: 128
+
+model:
+  embed_size: 512
+  num_heads: 4
+  num_layers: 10
+
+optimizer:
+  lr: 0.1
+  weight_decay: 0.0
+
+scheduler:
+  t_max: 100
+  eta_min: 0.0
+
+artifacts:
+  checkpoints_dir: artifacts/checkpoints
+  tokenizers_dir: artifacts/tokenizers
+  tokenizer_filename: tokenizer.json

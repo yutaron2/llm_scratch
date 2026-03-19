@@ -14,7 +14,6 @@ class SimpleGPTPredictor(nn.Module):
         self.max_len = max_len
         self.register_buffer("pe", self.positional_encoding(max_len, embed_size))
 
-        # Decoder-only GPT-style stack implemented with a causally-masked encoder.
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(
                 embed_size,
@@ -27,7 +26,7 @@ class SimpleGPTPredictor(nn.Module):
         self.lm_head = nn.Linear(embed_size, vocab_size)
 
     def forward(self, tokens):
-        positions = self.pe[:tokens.size(1), :]
+        positions = self.pe[: tokens.size(1), :]
         embedded = self.embedding(tokens) + positions
         causal_mask = self.generate_square_subsequent_mask(tokens.size(1), device=tokens.device)
         hidden = self.encoder(embedded, mask=causal_mask)
