@@ -1,0 +1,18 @@
+[project]
+name = "llm-scratch"
+version = "0.1.0"
+description = "Scratch experiments for a simple GPT-style model and BPE tokenizer."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.2",
+  "tqdm>=4.66",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
