@@ -20,6 +20,21 @@ def load_text(path: str) -> str:
     return (ROOT_DIR / path).read_text(encoding="utf-8")
 
 
+def resolve_artifact_path(directory: str, filename: str) -> Path:
+    return ROOT_DIR / directory / filename
+
+
+def load_tokenizer(directory: str, filename: str) -> BPETokenizer:
+    tokenizer_path = resolve_artifact_path(directory, filename)
+    if not tokenizer_path.exists():
+        raise FileNotFoundError(
+            "Tokenizer artifact was not found. "
+            f"Expected: {tokenizer_path}. "
+            "Run src/train_tokenizer.py first."
+        )
+    return BPETokenizer.load(str(tokenizer_path))
+
+
 def save_checkpoint(model, tokenizer, checkpoint_dir: Path, epoch: int) -> None:
     version_dir = checkpoint_dir / f"model_{epoch}"
     version_dir.mkdir(parents=True, exist_ok=True)
@@ -60,10 +75,15 @@ def generate_seq(model, tokenizer, text, seq_len, count=0, temperature=0.0):
 @hydra.main(version_base=None, config_path="../config", config_name="train")
 def main(cfg: DictConfig) -> None:
     text = load_text(cfg.data.input_path)
+    tokenizer = load_tokenizer(
+        cfg.artifacts.tokenizers_dir,
+        cfg.artifacts.tokenizer_filename,
+    )
 
-    tokenizer = BPETokenizer()
-    tokenizer.train(text, vocab_size=cfg.tokenizer.vocab_size)
-
+    print(
+        "Loaded tokenizer from: "
+        f"{resolve_artifact_path(cfg.artifacts.tokenizers_dir, cfg.artifacts.tokenizer_filename)}"
+    )
     print(f"Tokenizer vocab size: {tokenizer.vocab_size}")
     if tokenizer.merges:
         print(f"最初のマージ: {tokenizer.describe_merge(0)}")
@@ -102,10 +122,7 @@ def main(cfg: DictConfig) -> None:
     criterion = nn.CrossEntropyLoss()
 
     checkpoint_dir = ROOT_DIR / cfg.artifacts.checkpoints_dir
-    tokenizer_dir = ROOT_DIR / cfg.artifacts.tokenizers_dir
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    tokenizer_dir.mkdir(parents=True, exist_ok=True)
-    tokenizer.save(str(tokenizer_dir / cfg.artifacts.tokenizer_filename))
 
     print("\n学習開始...")
 

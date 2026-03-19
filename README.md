@@ -35,12 +35,19 @@ A Make target cannot directly modify the parent shell, so the activation command
 make test
 ```
 
-### Run the training script
+### Train the tokenizer
+```bash
+uv run python src/train_tokenizer.py
+```
+
+This produces the tokenizer artifact configured by `artifacts.tokenizers_dir` and `artifacts.tokenizer_filename`.
+
+### Run the model training script
 ```bash
 make run
 ```
 
-This launches the Hydra-based training entrypoint:
+This launches the Hydra-based training entrypoint, which now expects an already-trained tokenizer artifact:
 
 ```bash
 uv run python src/train.py
@@ -53,7 +60,8 @@ uv run python src/train.py training.epochs=10 training.batch_size=64
 ```
 
 ## Project files
-- `src/train.py`: Hydra-based training script
+- `src/train.py`: Hydra-based model training script that loads a saved tokenizer
+- `src/train_tokenizer.py`: Hydra-based tokenizer training script
 - `src/models/simple_transformer.py`: transformer model definition
 - `src/tokenizer/bpe.py`: character-level BPE tokenizer implementation
 - `src/datasets/text_dataset.py`: next-token training sample creation
