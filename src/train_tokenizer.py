@@ -1,16 +1,8 @@
-from pathlib import Path
-
 import hydra
 from omegaconf import DictConfig
 
+from tokenizer.artifacts import load_text, save_tokenizer
 from tokenizer.bpe import BPETokenizer
-
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-
-
-def load_text(path: str) -> str:
-    return (ROOT_DIR / path).read_text(encoding="utf-8")
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="train")
@@ -20,9 +12,11 @@ def main(cfg: DictConfig) -> None:
     tokenizer = BPETokenizer()
     tokenizer.train(text, vocab_size=cfg.tokenizer.vocab_size)
 
-    tokenizer_path = ROOT_DIR / cfg.artifacts.tokenizers_dir / cfg.artifacts.tokenizer_filename
-    tokenizer_path.parent.mkdir(parents=True, exist_ok=True)
-    tokenizer.save(str(tokenizer_path))
+    tokenizer_path = save_tokenizer(
+        tokenizer,
+        cfg.artifacts.tokenizers_dir,
+        cfg.artifacts.tokenizer_filename,
+    )
 
     print(f"Tokenizer saved to: {tokenizer_path}")
     print(f"Tokenizer vocab size: {tokenizer.vocab_size}")

@@ -10,29 +10,10 @@ from tqdm import tqdm
 
 from datasets.text_dataset import create_training_data
 from models.simple_transformer import SimpleGPTPredictor, device
-from tokenizer.bpe import BPETokenizer
+from tokenizer.artifacts import load_text, load_tokenizer, resolve_tokenizer_artifact_path
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-
-
-def load_text(path: str) -> str:
-    return (ROOT_DIR / path).read_text(encoding="utf-8")
-
-
-def resolve_artifact_path(directory: str, filename: str) -> Path:
-    return ROOT_DIR / directory / filename
-
-
-def load_tokenizer(directory: str, filename: str) -> BPETokenizer:
-    tokenizer_path = resolve_artifact_path(directory, filename)
-    if not tokenizer_path.exists():
-        raise FileNotFoundError(
-            "Tokenizer artifact was not found. "
-            f"Expected: {tokenizer_path}. "
-            "Run src/train_tokenizer.py first."
-        )
-    return BPETokenizer.load(str(tokenizer_path))
 
 
 def save_checkpoint(model, tokenizer, checkpoint_dir: Path, epoch: int) -> None:
@@ -82,7 +63,7 @@ def main(cfg: DictConfig) -> None:
 
     print(
         "Loaded tokenizer from: "
-        f"{resolve_artifact_path(cfg.artifacts.tokenizers_dir, cfg.artifacts.tokenizer_filename)}"
+        f"{resolve_tokenizer_artifact_path(cfg.artifacts.tokenizers_dir, cfg.artifacts.tokenizer_filename)}"
     )
     print(f"Tokenizer vocab size: {tokenizer.vocab_size}")
     if tokenizer.merges:
