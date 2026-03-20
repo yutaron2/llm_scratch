@@ -9,15 +9,16 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from datasets.text_dataset import create_training_data
-from models.simple_encoder_decoder_transformer import SimpleEncoderDecoderTransformer, device
-from tokenizer.bpe import BPETokenizer
+from models.simple_transformer import SimpleGPTPredictor, device
+from tokenizer.artifacts import (
+    load_text,
+    load_tokenizer,
+    resolve_tokenizer_artifact_path,
+    validate_loaded_tokenizer,
+)
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-
-
-def load_text(path: str) -> str:
-    return (ROOT_DIR / path).read_text(encoding="utf-8")
 
 
 def save_checkpoint(model, tokenizer, checkpoint_dir: Path, epoch: int) -> None:
@@ -88,10 +89,16 @@ def generate_seq(model, tokenizer, text, seq_len, count=0, temperature=0.0):
 @hydra.main(version_base=None, config_path="../config", config_name="train")
 def main(cfg: DictConfig) -> None:
     text = load_text(cfg.data.input_path)
+    tokenizer = load_tokenizer(
+        cfg.artifacts.tokenizers_dir,
+        cfg.artifacts.tokenizer_filename,
+    )
+    validate_loaded_tokenizer(tokenizer, text, cfg.tokenizer.vocab_size)
 
-    tokenizer = BPETokenizer(special_tokens=["<pad>", "<bos>", "<eos>"])
-    tokenizer.train(text, vocab_size=cfg.tokenizer.vocab_size)
-
+    print(
+        "Loaded tokenizer from: "
+        f"{resolve_tokenizer_artifact_path(cfg.artifacts.tokenizers_dir, cfg.artifacts.tokenizer_filename)}"
+    )
     print(f"Tokenizer vocab size: {tokenizer.vocab_size}")
     if tokenizer.merges:
         print(f"最初のマージ: {tokenizer.describe_merge(0)}")
@@ -136,10 +143,7 @@ def main(cfg: DictConfig) -> None:
     )
 
     checkpoint_dir = ROOT_DIR / cfg.artifacts.checkpoints_dir
-    tokenizer_dir = ROOT_DIR / cfg.artifacts.tokenizers_dir
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    tokenizer_dir.mkdir(parents=True, exist_ok=True)
-    tokenizer.save(str(tokenizer_dir / cfg.artifacts.tokenizer_filename))
 
     print("\n学習開始...")
 

@@ -3,7 +3,59 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from src.tokenizer.artifacts import (
+    load_tokenizer,
+    resolve_tokenizer_artifact_path,
+    save_tokenizer,
+    validate_loaded_tokenizer,
+)
 from src.tokenizer.bpe import BPETokenizer
+
+
+class TokenizerArtifactTests(unittest.TestCase):
+    def test_save_and_load_tokenizer_artifact(self):
+        tokenizer = BPETokenizer()
+        tokenizer.train("banana bandana", vocab_size=20)
+
+        artifact_dir = "artifacts/test-tokenizers"
+        artifact_name = "artifact-test.json"
+        artifact_path = resolve_tokenizer_artifact_path(artifact_dir, artifact_name)
+
+        try:
+            save_tokenizer(tokenizer, artifact_dir, artifact_name)
+            loaded = load_tokenizer(artifact_dir, artifact_name)
+
+            self.assertEqual(loaded.encode("banana"), tokenizer.encode("banana"))
+        finally:
+            if artifact_path.exists():
+                artifact_path.unlink()
+            if artifact_path.parent.exists():
+                artifact_path.parent.rmdir()
+
+    def test_load_tokenizer_requires_existing_artifact(self):
+        with self.assertRaises(FileNotFoundError):
+            load_tokenizer("artifacts/test-tokenizers", "missing.json")
+
+
+    def test_validate_loaded_tokenizer_rejects_vocab_mismatch(self):
+        tokenizer = BPETokenizer()
+        tokenizer.train("banana bandana", vocab_size=20)
+
+        with self.assertRaisesRegex(ValueError, "Expected vocab_size=21"):
+            validate_loaded_tokenizer(tokenizer, "banana bandana", expected_vocab_size=21)
+
+    def test_validate_loaded_tokenizer_rejects_incompatible_corpus(self):
+        tokenizer = BPETokenizer()
+        tokenizer.train("abcabc", vocab_size=10)
+
+        with self.assertRaisesRegex(ValueError, "cannot encode the configured training corpus"):
+            validate_loaded_tokenizer(tokenizer, "abcz", expected_vocab_size=tokenizer.vocab_size)
+
+    def test_validate_loaded_tokenizer_accepts_matching_config(self):
+        tokenizer = BPETokenizer()
+        tokenizer.train("banana bandana", vocab_size=20)
+
+        validate_loaded_tokenizer(tokenizer, "banana bandana", expected_vocab_size=tokenizer.vocab_size)
 
 
 class BPETokenizerTests(unittest.TestCase):
