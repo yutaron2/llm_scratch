@@ -10,7 +10,12 @@ from tqdm import tqdm
 
 from datasets.text_dataset import create_training_data
 from models.simple_transformer import SimpleGPTPredictor, device
-from tokenizer.artifacts import load_text, load_tokenizer, resolve_tokenizer_artifact_path
+from tokenizer.artifacts import (
+    load_text,
+    load_tokenizer,
+    resolve_tokenizer_artifact_path,
+    validate_loaded_tokenizer,
+)
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -60,6 +65,7 @@ def main(cfg: DictConfig) -> None:
         cfg.artifacts.tokenizers_dir,
         cfg.artifacts.tokenizer_filename,
     )
+    validate_loaded_tokenizer(tokenizer, text, cfg.tokenizer.vocab_size)
 
     print(
         "Loaded tokenizer from: "
