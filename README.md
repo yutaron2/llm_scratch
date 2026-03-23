@@ -54,7 +54,7 @@ uv run python src/train.py
 ```
 
 Training uses a decoder-only autoregressive setup built from one corpus:
-- each sample is a left-to-right language modeling window
+- each sample is a left-to-right language modeling window served lazily from a `Dataset`/`DataLoader` pipeline
 - the tokenized corpus is treated as one continuous stream
 - each training input is a contiguous slice of that stream with fixed length
 - labels are the next-token-shifted slice for standard causal language modeling
@@ -69,9 +69,9 @@ uv run python src/train.py training.epochs=10 training.batch_size=64
 - `src/train.py`: Hydra-based decoder-only training script that loads a saved tokenizer
 - `src/train_tokenizer.py`: Hydra-based tokenizer training script
 - `src/models/embedding.py`: token embedding and sinusoidal positional encoding
-- `src/models/simple_decoder_transformer.py`: decoder-only Transformer definition with a causal mask
+- `src/models/simple_decoder_transformer.py`: GPT-style decoder-only Transformer blocks with causal self-attention
 - `src/tokenizer/bpe.py`: character-level BPE tokenizer implementation
-- `src/datasets/text_dataset.py`: decoder-only autoregressive training sample creation
+- `src/datasets/text_dataset.py`: decoder-only autoregressive dataset and dataloader helpers
 - `config/train.yaml`: model training configuration
 - `config/train_tokenizer.yaml`: tokenizer training configuration
 - `data/inputLearnText.txt`: training corpus

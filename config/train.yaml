@@ -5,6 +5,7 @@ training:
   sequence_length: 64
   epochs: 50
   batch_size: 64
+  shuffle: true
 
 model:
   embed_size: 128

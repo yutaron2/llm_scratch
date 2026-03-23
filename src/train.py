@@ -7,7 +7,7 @@ import torch.optim as optim
 from omegaconf import DictConfig
 from tqdm import tqdm
 
-from datasets.text_dataset import create_autoregressive_training_data
+from datasets.text_dataset import create_autoregressive_dataloader
 from models.simple_decoder_transformer import SimpleDecoderTransformer
 from tokenizer.artifacts import load_text, load_tokenizer
 
@@ -25,9 +25,11 @@ def save_checkpoint(model, checkpoint_dir: Path) -> None:
     torch.save(model.state_dict(), checkpoint_dir / "model_last.pth")
 
 
-def log_sample_pair(tokenizer, inputs, labels) -> None:
+def log_sample_batch(tokenizer, batch) -> None:
+    inputs = batch["inputs"]
+    labels = batch["labels"]
     sample_index = min(20, len(inputs) - 1)
-    log(f"Training samples: {len(inputs)}")
+    log(f"Training samples: {len(inputs)} in preview batch")
     log(
         "Example decoder input: "
         f"{tokenizer.decode(inputs[sample_index].tolist(), skip_special_tokens=False)!r}"
@@ -55,13 +57,15 @@ def main(cfg: DictConfig) -> None:
     token_ids = tokenizer.encode(text)
     log(f"Tokenized corpus length: {len(token_ids)}")
 
-    log("Building decoder-only autoregressive training tensors...")
-    inputs, labels = create_autoregressive_training_data(
+    log("Building decoder-only autoregressive dataloader...")
+    train_loader = create_autoregressive_dataloader(
         token_ids=token_ids,
         seq_len=cfg.training.sequence_length,
-        device=DEVICE,
+        batch_size=cfg.training.batch_size,
+        shuffle=cfg.training.shuffle,
     )
-    log_sample_pair(tokenizer, inputs, labels)
+    preview_batch = next(iter(train_loader))
+    log_sample_batch(tokenizer, preview_batch)
 
     log("Building model...")
     model = SimpleDecoderTransformer(
@@ -89,20 +93,19 @@ def main(cfg: DictConfig) -> None:
         total_loss = 0.0
         num_batches = 0
 
-        for start in tqdm(
-            range(0, len(inputs), cfg.training.batch_size),
+        for batch in tqdm(
+            train_loader,
             desc=f"epoch {epoch + 1}/{cfg.training.epochs}",
             leave=False,
         ):
-            input_batch = inputs[start : start + cfg.training.batch_size]
-            label_batch = labels[start : start + cfg.training.batch_size]
+            input_batch = batch["inputs"].to(DEVICE)
+            label_batch = batch["labels"].to(DEVICE)
 
             optimizer.zero_grad(set_to_none=True)
             logits = model(input_batch)
             loss = F.cross_entropy(
                 logits.reshape(-1, logits.size(-1)),
                 label_batch.reshape(-1),
-                ignore_index=tokenizer.pad_token_id,
             )
             loss.backward()
             optimizer.step()
