@@ -59,6 +59,8 @@ Training uses a decoder-only autoregressive setup built from one corpus:
 - each training input is a contiguous slice of that stream with fixed length
 - labels are the next-token-shifted slice for standard causal language modeling
 
+At inference time, the model predicts one tokenizer token at a time, not one whole word at a time. Because the tokenizer is character-level BPE, a word like `give` may be produced over multiple decoding steps such as `g`, `iv`, then `e `.
+
 You can override runtime values with Hydra arguments, for example:
 
 ```bash
