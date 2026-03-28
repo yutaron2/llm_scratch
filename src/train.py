@@ -9,6 +9,7 @@ from datasets.text_dataset import create_autoregressive_dataloader
 from models.simple_decoder_transformer import SimpleDecoderTransformer
 from training.trainer import Trainer
 from tokenizer.artifacts import load_text, load_tokenizer
+from utils.model import get_parameter_counts
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -101,6 +102,14 @@ def main(cfg: DictConfig) -> None:
     )
     model.to(DEVICE)
     model.train()
+    parameter_counts = get_parameter_counts(model)
+    print(
+        "Model parameters: "
+        f"total={parameter_counts.total:,} "
+        f"trainable={parameter_counts.trainable:,} "
+        f"frozen={parameter_counts.non_trainable:,}",
+        flush=True,
+    )
 
     optimizer = optim.AdamW(
         model.parameters(),
