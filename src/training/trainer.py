@@ -5,6 +5,7 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 import wandb
+from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
@@ -41,7 +42,7 @@ class Trainer:
     def fit(self) -> None:
         self.run = self._init_wandb()
 
-        print("Training...", flush=True)
+        logger.info("Training...")
         try:
             for epoch_index in range(self.cfg.training.epochs):
                 epoch_number = epoch_index + 1
@@ -62,14 +63,19 @@ class Trainer:
                     "optimizer/lr": learning_rate,
                 }
 
-                print(
-                    f"Epoch {epoch_number}: "
-                    f"train_loss={train_loss:.6f} "
-                    f"val_loss={validation_loss:.6f} "
-                    f"train_ppl={train_perplexity:.3f} "
-                    f"val_ppl={validation_perplexity:.3f} "
-                    f"lr={learning_rate:.6g}",
-                    flush=True,
+                logger.info(
+                    "Epoch {}: "
+                    "train_loss={:.6f} "
+                    "val_loss={:.6f} "
+                    "train_ppl={:.3f} "
+                    "val_ppl={:.3f} "
+                    "lr={:.6g}",
+                    epoch_number,
+                    train_loss,
+                    validation_loss,
+                    train_perplexity,
+                    validation_perplexity,
+                    learning_rate,
                 )
 
                 if self.run is not None:
@@ -169,9 +175,9 @@ class Trainer:
 
         run_url = getattr(run, "url", None)
         if run_url:
-            print(f"W&B run URL: {run_url}", flush=True)
+            logger.info("W&B run URL: {}", run_url)
         else:
-            print(f"W&B run directory: {run.dir}", flush=True)
+            logger.info("W&B run directory: {}", run.dir)
 
         return run
 
@@ -205,10 +211,11 @@ class Trainer:
         if epoch_number == self.cfg.training.epochs:
             aliases.append("final")
         run.log_artifact(artifact, aliases=aliases)
-        print(
-            f"Logged model artifact for epoch {epoch_number}: "
-            f"{checkpoint_path.name} ({', '.join(aliases)})",
-            flush=True,
+        logger.info(
+            "Logged model artifact for epoch {}: {} ({})",
+            epoch_number,
+            checkpoint_path.name,
+            ", ".join(aliases),
         )
 
     def _model_artifact_name(self) -> str:

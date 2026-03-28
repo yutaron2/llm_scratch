@@ -1,4 +1,5 @@
 import hydra
+from loguru import logger
 from omegaconf import DictConfig
 
 from tokenizer.artifacts import load_text, save_tokenizer
@@ -18,8 +19,8 @@ def main(cfg: DictConfig) -> None:
         cfg.artifacts.tokenizer_filename,
     )
 
-    print(f"Tokenizer saved to: {tokenizer_path}")
-    print(f"Tokenizer vocab size: {tokenizer.vocab_size}")
+    logger.info("Tokenizer saved to: {}", tokenizer_path)
+    logger.info("Tokenizer vocab size: {}", tokenizer.vocab_size)
 
 
 if __name__ == "__main__":
